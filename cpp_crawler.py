@@ -7,13 +7,15 @@ import csv
 import logging
 import os
 import re
+import PageGraph as pg
 
-PAGE_LIMIT = 2000
+PAGE_LIMIT=None # Check main function below to set the PAGE_LIMIT variable
+
 LOGGING = False  # change to True to debug
 
 
 class CPPScraper(CrawlSpider):
-
+    
     name = 'cpp'
     start_urls = ['https://www.cpp.edu/index.shtml']  # cpp home page
     pages_visited = 0
@@ -21,12 +23,16 @@ class CPPScraper(CrawlSpider):
     counts = Counter()   # counts the number of links to a url
     csv_created = False  # used to only create csv once
 
+    page_graph = pg.PageGraph() # Setting up graph object to represent connected nodes of a website
+    # { url: { "num_in_links": num_in_links, "num_out_links": num_out_links, "out_links": [out links] } }
+
     link_extractor = LinkExtractor(allow=r'^https://www.cpp.edu.*')  # extract internal links
 
     rules = [Rule(link_extractor, callback='parse_start_url', follow=True)]  # follow internal links
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
+                
         if not LOGGING:
             logging.getLogger('scrapy').setLevel(logging.WARNING)
 
@@ -43,11 +49,15 @@ class CPPScraper(CrawlSpider):
             if not self.csv_created:  # create csv once
                 self.csv_stats()
                 self.csv_created = True
+                self.create_PageGraph()
             raise CloseSpider()  # stop crawling
+            return self.page_graph
+            
         out_links = []
         try:
             for link in self.link_extractor.extract_links(response):
                 url = link.url.replace('~', '')  # '~' causing problems with how links are counted
+                
                 if url not in out_links:         # do not count out links more than once
                     out_links.append(url)
                     if url in self.counts:
@@ -59,10 +69,20 @@ class CPPScraper(CrawlSpider):
         self.dictionary[response.url] = out_links
         self.pages_visited += 1
 
+    def create_PageGraph(self):
+        for url in self.dictionary:
+            if url in self.counts:
+                self.page_graph.add_page(url, self.counts[url], len(self.dictionary[url]), self.dictionary[url])
+            else:
+                self.page_graph.add_page(url, 0, len(self.dictionary[url]), self.dictionary[url])
+
+
     def csv_stats(self):
-        if not os.path.exists('csv'):
-            os.makedirs('csv')
-        file = open('csv/cpp.csv', 'w', newline='')
+        relative_path = './PageRank_Modified_Eugene'
+        complete_path = relative_path + '/csv'
+        if not os.path.exists(complete_path):
+            os.makedirs(complete_path)
+        file = open(complete_path + '/cpp.csv', 'w', newline='')
         writer = csv.writer(file)
         writer.writerow(('url', '# links to url', 'out links'))
         for key in self.dictionary:
@@ -72,13 +92,29 @@ class CPPScraper(CrawlSpider):
                 writer.writerow((key, 0, self.dictionary[key]))
         file.close()
 
+    
+
+
+
+def scrape_CPP(page_limit):
+    global PAGE_LIMIT
+    PAGE_LIMIT = page_limit
+    process = CrawlerProcess()
+    process.crawl(CPPScraper)
+    process.start()
 
 def main():
+
+    page_graph = pg.PageGraph()
+
     scrape_cpp = input('Perform CPP Scraping? (YES): ')
     if scrape_cpp == 'YES':
+        global PAGE_LIMIT
+        PAGE_LIMIT = 15
         process = CrawlerProcess()
         process.crawl(CPPScraper)
-        process.start()
+        page_graph = process.start()
+        
     else:
         print('CPP Scraping skipped')
 

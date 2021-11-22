@@ -55,6 +55,14 @@ class CPPScraper(CrawlSpider):
             
         out_links = []
         try:
+            # for link in self.link_extractor.extract_links(response):
+            #     url = link.url
+            #     if 'html#' in link.url:  # remove anchors
+            #         url = link.url.split('#')[0]
+            #     if link.url.endswith('#main') or link.url.endswith('#main-body') or link.url.endswith('#CPPCarousel') or link.url.endswith('faculty-center-flagship-workshop') or link.url.endswith('#'):  # remove anchors
+            #         url = link.url.replace('#main', '').replace('#main-body', '').replace('#CPPCarousel', '').replace('faculty-center-flagship-workshop', '').replace('#', '')       
+            #     if url not in out_links:         # do not count out links more than once
+            #         out_links.append(url)
             for link in self.link_extractor.extract_links(response):
                 url = link.url.replace('~', '')  # '~' causing problems with how links are counted
                 
@@ -85,7 +93,9 @@ class CPPScraper(CrawlSpider):
         file = open(complete_path + '/cpp.csv', 'w', newline='')
         writer = csv.writer(file)
         writer.writerow(('url', '# links to url', 'out links'))
+        # writer.writerow(('url', 'out links')) 
         for key in self.dictionary:
+            # writer.writerow((key, self.dictionary[key]))
             if key in self.counts:
                 writer.writerow((key, self.counts[key], self.dictionary[key]))
             else:

@@ -32,6 +32,7 @@ class CPPScraper(CrawlSpider):
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
+
                 
         if not LOGGING:
             logging.getLogger('scrapy').setLevel(logging.WARNING)
@@ -51,7 +52,7 @@ class CPPScraper(CrawlSpider):
                 self.csv_created = True
                 self.create_PageGraph()
             raise CloseSpider()  # stop crawling
-            return self.page_graph
+            
             
         out_links = []
         try:
@@ -78,7 +79,7 @@ class CPPScraper(CrawlSpider):
 
 
     def csv_stats(self):
-        relative_path = './PageRank_Modified_Eugene'
+        relative_path = '.'
         complete_path = relative_path + '/csv'
         if not os.path.exists(complete_path):
             os.makedirs(complete_path)
@@ -110,9 +111,8 @@ def main():
         PAGE_LIMIT = 15
         process = CrawlerProcess()
         process.crawl(CPPScraper)
-        page_graph = process.start()
-
-        page_graph.display_keys()
+        process.start()
+       
         
     else:
         print('CPP Scraping skipped')

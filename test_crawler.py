@@ -1,130 +1,139 @@
-import httplib2
-import time
+from collections import Counter
+from scrapy.crawler import CrawlerProcess
+from scrapy.exceptions import CloseSpider, NotSupported
+from scrapy.linkextractors import LinkExtractor
+from scrapy.spiders import CrawlSpider, Rule
+import csv
+import logging
 import os
-from pathlib import Path
-from bs4 import BeautifulSoup, SoupStrainer
+import re
+import page_graph as pg
 
-def isAlreadyIncludedOrVisited(url, frontier, sites_visited):
-    return ( url not in frontier ) and ( url not in sites_visited )
+PAGE_LIMIT=None # Check main function below to set the PAGE_LIMIT variable
 
-def linkExtraction(url, response, frontier, sites_visited):
+LOGGING = False  # change to True to debug
 
-    num_of_links_extracted = 0
-
-    for link in BeautifulSoup(response, parse_only=SoupStrainer('a'), features='html.parser'):
-        
-        if link.has_attr('href') and len(link['href']) > 1:
-            
-            if link['href'][0] == '/':
-                
-                if url[-1] == '/':
-                    extracted_url = url + link['href'][1:]
-                elif url[-1] != '/':
-                    extracted_url = url + link['href']
-
-                if isAlreadyIncludedOrVisited(extracted_url, frontier, sites_visited): # Avoiding duplicate links and redundancy
-                    frontier.append(extracted_url)
-                    num_of_links_extracted += 1
-
-            elif link['href'][:4] == 'http':
-                
-                extracted_url = link['href']
-
-                if isAlreadyIncludedOrVisited(extracted_url, frontier, sites_visited): 
-                    frontier.append(extracted_url)
-                    num_of_links_extracted += 1
-
-    return num_of_links_extracted
-
-def printFrontier(frontier):
-    print('Stored Links:')
-    for i, link in enumerate(frontier):
-        print(i, link)
-
-def saveHtmlFile(repository_path, response, status, current_html_number):
-           
-    directory_exists = os.path.isdir(repository_path)
-
-    # Get Web Document Encoding
-    encoding = status['content-type'][status['content-type'].lower().find('utf'):].lower()
-
-    if status['content-type'] == 'text/html':
-        encoding = 'utf-8'
+class CPPScraper(CrawlSpider):
     
-    if directory_exists:
+    name = 'cpp'
+    start_urls = ['https://www.cpp.edu/index.shtml']  # cpp home page
+    pages_visited = 0
+    dictionary = {}      # {url, [out link urls]}
+    counts = Counter()   # counts the number of links to a url
+    csv_created = False  # used to only create csv once
 
-        html_file_name = "{:04d}".format(current_html_number) + "_html_file.html"
-        full_path_name = repository_path + html_file_name
-        html_file = open(full_path_name, 'w')
-        
+    page_graph = pg.PageGraph() # Setting up graph object to represent connected nodes of a website
+    # { url: { "num_in_links": num_in_links, "num_out_links": num_out_links, "out_links": [out links] } }
+
+    link_extractor = LinkExtractor(allow=r'^https://www.cpp.edu.*')  # extract internal links
+
+    rules = [Rule(link_extractor, callback='parse_start_url', follow=True)]  # follow internal links
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.output_callback = kw.get('args').get('callback')
+                
+        if not LOGGING:
+            logging.getLogger('scrapy').setLevel(logging.WARNING)
+
+    def parse(self, response, **kwargs):
+        pass
+
+    def parse_start_url(self, response, **kwargs):
         try:
-
-            html_file.write(response.decode(encoding))
+            if re.match(r'^https://idp.*', response.url):  # skip idp, counted as an internal link
+                return
+        except NotSupported:
+            return
+        if self.pages_visited >= PAGE_LIMIT:
+            if not self.csv_created:  # create csv once
+                self.csv_stats()
+                self.csv_created = True
+                self.create_PageGraph()
+            raise CloseSpider()  # stop crawling
             
-        except:
+            
+        out_links = []
+        try:
+            for link in self.link_extractor.extract_links(response):
+                url = link.url.replace('~', '')  # '~' causing problems with how links are counted
+                
+                if url not in out_links:         # do not count out links more than once
+                    out_links.append(url)
+                    if url in self.counts:
+                        self.counts[url] += 1
+                    else:
+                        self.counts[url] = 1
+        except AttributeError as e:  # for content that is not a web page
+            print(response.url, e)
+        self.dictionary[response.url] = out_links
+        self.pages_visited += 1
 
-            return False
+    def create_PageGraph(self):
+        for url in self.dictionary:
+            if url in self.counts:
+                self.page_graph.add_page(url, self.counts[url], len(self.dictionary[url]), self.dictionary[url])
+            else:
+                self.page_graph.add_page(url, 0, len(self.dictionary[url]), self.dictionary[url])
 
-        html_file.close()
 
+    def csv_stats(self):
+        relative_path = '.'
+        complete_path = relative_path + '/csv'
+        if not os.path.exists(complete_path):
+            os.makedirs(complete_path)
+        file = open(complete_path + '/cpp.csv', 'w', newline='')
+        writer = csv.writer(file)
+        writer.writerow(('url', '# links to url', 'out links'))
+        for key in self.dictionary:
+            if key in self.counts:
+                writer.writerow((key, self.counts[key], self.dictionary[key]))
+            else:
+                writer.writerow((key, 0, self.dictionary[key]))
+        file.close()
+
+    def close(self, spider, reason):
+        self.output_callback(self.page_graph)
+
+class CustomCrawler:
+
+    def __init__(self) -> None:
+        self.output = None
+        self.process = CrawlerProcess()
+
+    def yield_output(self, data):
+        self.output = data
+
+    def crawl(self, cls):
+        self.process.crawl(cls, args={'callback': self.yield_output})
+        self.process.start()
+
+def crawl_static(cls):
+    crawler = CustomCrawler()
+    crawler.crawl(cls)
+    return crawler.output
+
+def scrape_CPP(page_limit):
+    global PAGE_LIMIT
+    PAGE_LIMIT = page_limit
+    process = CrawlerProcess()
+    process.crawl(CPPScraper)
+    process.start()
+
+def main():
+
+    page_graph = pg.PageGraph()
+
+    scrape_cpp = input('Perform CPP Scraping? (YES): ')
+    if scrape_cpp == 'YES':
+        global PAGE_LIMIT
+        PAGE_LIMIT = 15
+        page_graph = crawl_static(CPPScraper)
+        page_graph.display_keys()
+        
     else:
-
-        Path(repository_path).mkdir(parents=True, exist_ok=True)
-
-        html_file_name = "{:04d}".format(current_html_number) + "_html_file.html"
-        full_path_name = repository_path + html_file_name
-        html_file = open(full_path_name, 'w')
-        
-        try:
-
-            html_file.write(response.decode(encoding))
-            
-        except:
-
-            return False
-
-        html_file.close()
-
-    return True   
-
-def http_crawler(seed, crawl_limit, repository_path):
-        
-    frontier = []
-    frontier.append(seed)
-
-    visited_sites = []
-    number_of_outlinks_per_site = []
-
-    http_obj = httplib2.Http(".cache", disable_ssl_certificate_validation=True)
-
-    pages_crawled = 0
-
-    current_html_file_number = 0
-    
-    while len(frontier) > 0 and pages_crawled < crawl_limit:
-        
-        url = frontier.pop(0)
-
-        try:
-            status, response = http_obj.request(url)
-        except:
-            status = {'status':'400'}
+        print('CPP Scraping skipped')
 
 
-        if status['status'] == '200':
-
-            if saveHtmlFile(repository_path, response, status, current_html_file_number):
-
-                current_html_file_number += 1
-
-                num_of_links_extracted = linkExtraction(url, response, frontier, visited_sites)
-                pages_crawled += 1
-
-                # Parallel lists for to maintain peformance of checking urls against visited sites
-                visited_sites.append(url)
-                number_of_outlinks_per_site.append(num_of_links_extracted)
-
-        # Politiness Rule: 350 millisecond pause
-        time.sleep(0.500)
-
-    return list(zip(visited_sites, number_of_outlinks_per_site))
+if __name__ == '__main__':
+    main()

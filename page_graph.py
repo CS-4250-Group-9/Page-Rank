@@ -13,3 +13,7 @@ class PageGraph:
 
     def convert_graph(self, page_graph):
         self.pages = copy.deepcopy(page_graph)
+
+    def display_keys(self):
+        pages = self.pages.keys() 
+        print(pages)

@@ -92,9 +92,6 @@ class CPPScraper(CrawlSpider):
                 writer.writerow((key, 0, self.dictionary[key]))
         file.close()
 
-    
-
-
 
 def scrape_CPP(page_limit):
     global PAGE_LIMIT
@@ -114,6 +111,8 @@ def main():
         process = CrawlerProcess()
         process.crawl(CPPScraper)
         page_graph = process.start()
+
+        page_graph.display_keys()
         
     else:
         print('CPP Scraping skipped')

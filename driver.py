@@ -3,10 +3,12 @@ import page_graph as pg
 
 graph = scrape_CPP(10)
 
+graph.page_rank()
 
-for key, value in graph.items():
-    print(key)
-    print(value)
+itr = iter(graph)
+first_item = next(itr)
+
+print(len(graph))
 
 
 

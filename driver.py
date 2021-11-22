@@ -1,3 +1,12 @@
-from cpp_crawler import scrape_CPP
+from test_crawlers import scrape_CPP, scrape_NFL
+import page_graph as pg
 
-scrape_CPP(50)
+graph = scrape_NFL(10)
+
+
+for key, value in graph.items():
+    print(key)
+    print(value)
+
+
+

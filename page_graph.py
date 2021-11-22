@@ -1,19 +1,7 @@
-import sys
-import copy
 from collections import deque
+from collections import UserDict
 
-
-class PageGraph:
-    def __init__(self):
-        self.size = 0
-        self.pages = dict()
+class PageGraph(UserDict):
 
     def add_page(self, url, num_in_links, num_out_links, out_links):
-        self.pages[url] = {"num_in_links": num_in_links, "num_out_links": num_out_links, "out_links": out_links}
-
-    def convert_graph(self, page_graph):
-        self.pages = copy.deepcopy(page_graph)
-
-    def display_keys(self):
-        pages = self.pages.keys() 
-        print(pages)
+        self.data[url] = {"num_in_links": num_in_links, "num_out_links": num_out_links, "out_links": out_links}

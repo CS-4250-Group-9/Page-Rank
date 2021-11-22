@@ -13,6 +13,8 @@ PAGE_LIMIT=None # Check main function below to set the PAGE_LIMIT variable
 
 LOGGING = False  # change to True to debug
 
+####################################
+
 class CPPScraper(CrawlSpider):
     
     name = 'cpp'
@@ -31,6 +33,7 @@ class CPPScraper(CrawlSpider):
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
+
         self.output_callback = kw.get('args').get('callback')
                 
         if not LOGGING:
@@ -50,8 +53,7 @@ class CPPScraper(CrawlSpider):
                 self.csv_stats()
                 self.csv_created = True
                 self.create_PageGraph()
-            raise CloseSpider()  # stop crawling
-            
+            raise CloseSpider()  # stop crawling          
             
         out_links = []
         try:
@@ -76,7 +78,6 @@ class CPPScraper(CrawlSpider):
             else:
                 self.page_graph.add_page(url, 0, len(self.dictionary[url]), self.dictionary[url])
 
-
     def csv_stats(self):
         relative_path = '.'
         complete_path = relative_path + '/csv'
@@ -94,6 +95,83 @@ class CPPScraper(CrawlSpider):
 
     def close(self, spider, reason):
         self.output_callback(self.page_graph)
+
+####################################
+
+class NFLScraper(CrawlSpider):
+    name = 'nfl'
+    custom_settings = {'CONCURRENT_REQUESTS': '35'}  # set to 35 to get all 32 teams, 3 extra links
+    start_urls = ['https://www.nfl.com/teams/']
+    pages_visited = 0
+    dictionary = {}      # {url, [out link urls]}
+    counts = Counter()   # counts the number of links to a url
+    csv_created = False  # used to only create csv once
+
+    page_graph = pg.PageGraph() # Setting up graph object to represent connected nodes of a website
+    # { url: { "num_in_links": num_in_links, "num_out_links": num_out_links, "out_links": [out links] } }
+
+    # extract internal links, deny both /fantasy and /fantasyfootball, both link to fantasy.nfl.com
+    link_extractor = LinkExtractor(allow=(r'^https://www.nfl.com/teams/([-A-Za-z0-9]*)?(/)?$',
+                                          r'https://www.nfl.com(/)?$', r'^https://www.nfl.com/news/.*'),
+                                   deny=r'^https://www.nfl.com/fantasy(football)?')
+
+    # follow internal links
+    rules = [Rule(link_extractor, callback='parse_start_url', follow=True)]
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+
+        self.output_callback = kw.get('args').get('callback')
+
+        if not LOGGING:
+            logging.getLogger('scrapy').setLevel(logging.WARNING)
+
+    def parse(self, response, **kwargs):
+        pass
+
+    def parse_start_url(self, response, **kwargs):
+        if self.pages_visited >= PAGE_LIMIT:
+            if not self.csv_created:  # create csv once
+                self.csv_stats()
+                self.csv_created = True
+                self.create_PageGraph()
+            raise CloseSpider()  # stop crawling
+        out_links = []
+        for link in self.link_extractor.extract_links(response):
+            url = link.url
+            if url not in out_links:  # do not count out links more than once
+                out_links.append(url)
+                if url in self.counts:
+                    self.counts[url] += 1
+                else:
+                    self.counts[url] = 1
+        self.dictionary[response.url] = out_links
+        self.pages_visited += 1
+
+    def create_PageGraph(self):
+        for url in self.dictionary:
+            if url in self.counts:
+                self.page_graph.add_page(url, self.counts[url], len(self.dictionary[url]), self.dictionary[url])
+            else:
+                self.page_graph.add_page(url, 0, len(self.dictionary[url]), self.dictionary[url])
+
+    def csv_stats(self):
+        if not os.path.exists('csv'):
+            os.makedirs('csv')
+        file = open('csv/nfl.csv', 'w', newline='')
+        writer = csv.writer(file)
+        writer.writerow(('url', '# links to url', 'out links'))
+        for key in self.dictionary:
+            if key in self.counts:
+                writer.writerow((key, self.counts[key], self.dictionary[key]))
+            else:
+                writer.writerow((key, 0, self.dictionary[key]))
+        file.close()
+  
+    def close(self, spider, reason):
+        self.output_callback(self.page_graph)
+
+####################################
 
 class CustomCrawler:
 
@@ -113,22 +191,29 @@ def crawl_static(cls):
     crawler.crawl(cls)
     return crawler.output
 
+####################################
+
 def scrape_CPP(page_limit):
     global PAGE_LIMIT
     PAGE_LIMIT = page_limit
-    process = CrawlerProcess()
-    process.crawl(CPPScraper)
-    process.start()
+    page_graph = crawl_static(CPPScraper)
+    return page_graph
+
+def scrape_NFL(page_limit):
+    global PAGE_LIMIT
+    PAGE_LIMIT = page_limit
+    page_graph = crawl_static(NFLScraper)
+    return page_graph
 
 def main():
 
     page_graph = pg.PageGraph()
 
-    scrape_cpp = input('Perform CPP Scraping? (YES): ')
+    scrape_cpp = input('Perform Scraping? (YES): ')
     if scrape_cpp == 'YES':
         global PAGE_LIMIT
         PAGE_LIMIT = 15
-        page_graph = crawl_static(CPPScraper)
+        page_graph = crawl_static(NFLScraper)
         page_graph.display_keys()
         
     else:

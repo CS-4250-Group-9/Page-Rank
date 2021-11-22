@@ -67,6 +67,9 @@ class NFLScraper(CrawlSpider):
                 writer.writerow((key, 0, self.dictionary[key]))
         file.close()
 
+    # Graph Construction
+    
+
 
 def main():
     scrape_nfl = input('Perform NFL Scraping? (YES): ')

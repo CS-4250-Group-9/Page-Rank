@@ -7,7 +7,7 @@ import csv
 import logging
 import os
 import re
-import PageGraph as pg
+import page_graph as pg
 
 PAGE_LIMIT=None # Check main function below to set the PAGE_LIMIT variable
 

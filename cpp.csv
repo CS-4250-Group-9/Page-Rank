@@ -1,4 +1,0 @@
-url,# links to url,# links from url,out links
-https://www.A.com,2,2,"['https://www.A.com', 'https://www.C.com']"
-https://www.B.com,1,1,['https://www.C.com']
-https://www.C.com,3,3,"['https://www.A.com', 'https://www.B.com', 'https://www.C.com']"

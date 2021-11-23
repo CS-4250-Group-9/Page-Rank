@@ -83,10 +83,11 @@ class CPPScraper(CrawlSpider):
     # For page graph manipulation # in_links
     def create_PageGraph(self):
         for url in self.out_link_dictionary:
-            if url in self.counts:
-                self.page_graph.add_page(url, self.counts[url], self.in_link_dictionary[url], len(self.out_link_dictionary[url]), self.out_link_dictionary[url])
-            else:
-                self.page_graph.add_page(url, 0, list(), len(self.out_link_dictionary[url]), self.out_link_dictionary[url])
+            if (len(self.out_link_dictionary[url]) > 0): # Don't include dangling links
+                if url in self.counts:
+                    self.page_graph.add_page(url, self.counts[url], self.in_link_dictionary[url], len(self.out_link_dictionary[url]), self.out_link_dictionary[url])
+                else:
+                    self.page_graph.add_page(url, 0, list(), len(self.out_link_dictionary[url]), self.out_link_dictionary[url])
 
     def csv_stats(self):
         relative_path = '.'
@@ -173,10 +174,11 @@ class NFLScraper(CrawlSpider):
 
     def create_PageGraph(self):
         for url in self.out_link_dictionary:
-            if url in self.counts:
-                self.page_graph.add_page(url, self.counts[url], self.in_link_dictionary[url], len(self.out_link_dictionary[url]), self.out_link_dictionary[url])
-            else:
-                self.page_graph.add_page(url, 0, list(), len(self.out_link_dictionary[url]), self.out_link_dictionary[url])
+            if (len(self.out_link_dictionary[url]) > 0): # Don't include dangling links
+                if url in self.counts:
+                    self.page_graph.add_page(url, self.counts[url], self.in_link_dictionary[url], len(self.out_link_dictionary[url]), self.out_link_dictionary[url])
+                else:
+                    self.page_graph.add_page(url, 0, list(), len(self.out_link_dictionary[url]), self.out_link_dictionary[url])
 
     def csv_stats(self):
         if not os.path.exists('csv'):

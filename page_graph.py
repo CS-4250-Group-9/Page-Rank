@@ -15,7 +15,7 @@ class PageGraph(UserDict):
 
     def page_rank(self, num_of_iter=50):
 
-        # Dangling links checked at the crawler
+        # Dangling links checked at the crawlers.py, refer to create_PageGraph() method
         
         # Set initial page ranks for all pages in graph: iteration 0
 
@@ -38,7 +38,11 @@ class PageGraph(UserDict):
             for page in updated_rankings:
                 self.data[page]['page_rank'] = updated_rankings[page]
 
+    def get_sorted_rankings(self):
 
+        # Sort according to page rank
+        sorted_pages = sorted(self.data.keys(), key=lambda x: self.data[x]['page_rank'], reverse=True)
+        return sorted_pages
         
 
 

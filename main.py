@@ -1,26 +1,28 @@
 from crawlers import scrape_CPP, scrape_NFL
 import page_graph as pg
 
-graph_CPP = scrape_CPP(20)
+#########################################################
 
-graph_CPP.page_rank(50)
+# graph_CPP = scrape_CPP(2000)
 
-# itr = iter(graph_CPP)
-# first_item = next(itr)
+# graph_CPP.page_rank(50)
 
-# for page in graph_CPP:
-#     print(graph_CPP[page]['page_rank'])
+# # itr = iter(graph_CPP)
+# # first_item = next(itr)
 
-sorted_ranks = graph_CPP.get_sorted_rankings()
+# # for page in graph_CPP:
+# #     print(graph_CPP[page]['page_rank'])
+
+# sorted_ranks = graph_CPP.get_sorted_rankings()
 
 
-with open('page_rankings_CPP.txt', 'w') as file:
+# with open('page_rankings_CPP.txt', 'w') as file:
 
-    for i, url in enumerate(sorted_ranks):
-        rank = graph_CPP[url]['page_rank']
-        file.write(f"{rank}: {url}\n")
-        if i >= 99:
-            break
+#     for i, url in enumerate(sorted_ranks):
+#         rank = graph_CPP[url]['page_rank']
+#         file.write(f"{rank}: {url}\n")
+#         if i >= 99:
+#             break
 
 #########################################################
 

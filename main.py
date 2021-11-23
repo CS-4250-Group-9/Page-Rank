@@ -32,7 +32,6 @@ import page_graph as pg
 
 ###### End of CPP Scraper ###############################
 
-
 ######  NFL Scraper #####################################
 
 # graph_NFL = scrape_NFL(2000)

@@ -22,7 +22,7 @@ class PageGraph(UserDict):
         N = len(self.data) # total number of nodes
 
         for page in self.data:
-            self[page]['page_rank'] = 1 / N
+            self.data[page]['page_rank'] = 1 / N
 
         # Start iterative process of calculating page_ranks
         for iteration in range(num_of_iter):
@@ -45,5 +45,54 @@ class PageGraph(UserDict):
         return sorted_pages
         
 
+    def _test_page_rank_formula(self, test_graph, current_page):
+        result = 0
+        in_links = test_graph[current_page]['in_links']
+        for link in in_links:
+            result += test_graph[link]['page_rank'] / test_graph[link]['num_out_links']
+        return result
 
+    def _test_page_rank(self, _iterations=3):
+        test_graph = {  'A': {"num_in_links": 3, "in_links": ['B', 'D', 'C'], "num_out_links": 1, "out_links": ['B']}, 
+                        'B': {"num_in_links": 2, "in_links": ['A', 'C'], "num_out_links": 2, "out_links": ['A', 'D']}, 
+                        'C': {"num_in_links": 1, "in_links": ['D'], "num_out_links": 3, "out_links": ['A','D','B']}, 
+                        'D': {"num_in_links": 2, "in_links": ['B', 'C'], "num_out_links": 2, "out_links": ['A', 'C']} 
+                    }
         
+        N = len(test_graph) # total number of nodes
+
+        for page in test_graph:
+            test_graph[page]['page_rank'] = 1 / N
+
+
+        for iteration in range(_iterations):
+            
+            updated_rankings = {} # temporarily stores the updated intermediate page_ranks
+
+            for page in test_graph:
+
+                updated_page_rank = self._test_page_rank_formula(test_graph, page)
+                updated_rankings[page] = updated_page_rank
+
+            # Update all page ranks for current iteration
+            for page in updated_rankings:
+                test_graph[page]['page_rank'] = updated_rankings[page]
+
+        test_sorted_list = sorted(test_graph.keys(), key=lambda x: test_graph[x]['page_rank'], reverse=True)
+
+        sum = 0
+        for i, url in enumerate(test_sorted_list):
+            rank = test_graph[url]['page_rank']
+            print(f"{rank}: {url}\n")
+            sum += rank
+
+        print(f'The total of the page ranks are: {sum}')
+
+
+if __name__ == '__main__':
+    pg = PageGraph()
+
+    for iter in range(50):
+        print(f'###### iteration: {iter} ###########')
+        pg._test_page_rank(iter)
+        print(f'###############################')

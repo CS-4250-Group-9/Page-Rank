@@ -51,15 +51,16 @@ class CPPScraper(CrawlSpider):
             return
 
         if self.pages_visited >= PAGE_LIMIT:
-            if not self.csv_created:  # create csv once
-                self.csv_stats()
-                self.csv_created = True
-                self.create_PageGraph()
+            
+            self.create_PageGraph()
             raise CloseSpider()  # stop crawling          
          
         out_links = []
 
         try:
+
+            modified_url = response.url.replace('~','')
+
             for link in self.link_extractor.extract_links(response):
                 url = link.url.replace('~', '')  # '~' causing problems with how links are counted
                 
@@ -69,40 +70,40 @@ class CPPScraper(CrawlSpider):
                     
                     if url in self.counts:
                         self.counts[url] += 1
-                        self.in_link_dictionary[url].append(response.url) # in_links
+                        self.in_link_dictionary[url].append(modified_url) # in_links
                     else:
                         self.counts[url] = 1
-                        self.in_link_dictionary[url] = [response.url] # in_links
+                        self.in_link_dictionary[url] = [modified_url] # in_links
+
+                    if url not in self.out_link_dictionary:
+                        self.out_link_dictionary[url] = []
         
-            self.out_link_dictionary[response.url] = out_links
+            self.out_link_dictionary[modified_url] = out_links
             self.pages_visited += 1
+
         except AttributeError as e:  # for content that is not a web page
             print(response.url, e)
         
         
     # For page graph manipulation # in_links
     def create_PageGraph(self):
+
+        # Clean up
+        dangling_links = []
         for url in self.out_link_dictionary:
-            if (len(self.out_link_dictionary[url]) > 0): # Don't include dangling links
+            if len(self.out_link_dictionary[url]) == 0:
+                dangling_links.append(url)
+
+        for url in self.out_link_dictionary:
+            self.out_link_dictionary[url] = list(set(self.out_link_dictionary[url]) - set(dangling_links))
+
+        for url in self.out_link_dictionary:
+            if (len(self.out_link_dictionary[url]) > 0):
                 if url in self.counts:
                     self.page_graph.add_page(url, self.counts[url], self.in_link_dictionary[url], len(self.out_link_dictionary[url]), self.out_link_dictionary[url])
                 else:
                     self.page_graph.add_page(url, 0, list(), len(self.out_link_dictionary[url]), self.out_link_dictionary[url])
 
-    def csv_stats(self):
-        relative_path = '.'
-        complete_path = relative_path + '/csv'
-        if not os.path.exists(complete_path):
-            os.makedirs(complete_path)
-        file = open(complete_path + '/cpp.csv', 'w', newline='')
-        writer = csv.writer(file)
-        writer.writerow(('url', '# links to url', 'out links'))
-        for key in self.out_link_dictionary:
-            if key in self.counts:
-                writer.writerow((key, self.counts[key], self.out_link_dictionary[key]))
-            else:
-                writer.writerow((key, 0, self.out_link_dictionary[key]))
-        file.close()
 
     def close(self, spider, reason):
         self.output_callback(self.page_graph)
@@ -111,7 +112,7 @@ class CPPScraper(CrawlSpider):
 
 class NFLScraper(CrawlSpider):
     name = 'nfl'
-    custom_settings = {'CONCURRENT_REQUESTS': '35'}  # set to 35 to get all 32 teams, 3 extra links
+    # custom_settings = {'CONCURRENT_REQUESTS': '35'}  # set to 35 to get all 32 teams, 3 extra links
     start_urls = ['https://www.nfl.com/teams/']
     pages_visited = 0
     out_link_dictionary = {}      # {url, [out link urls]}
@@ -144,10 +145,8 @@ class NFLScraper(CrawlSpider):
     def parse_start_url(self, response, **kwargs):
 
         if self.pages_visited >= PAGE_LIMIT:
-            if not self.csv_created:  # create csv once
-                self.csv_stats()
-                self.csv_created = True
-                self.create_PageGraph()
+            
+            self.create_PageGraph()
             raise CloseSpider()  # stop crawling
         
         out_links = []
@@ -155,6 +154,7 @@ class NFLScraper(CrawlSpider):
         try:
             for link in self.link_extractor.extract_links(response):
                 url = link.url
+
                 if url not in out_links:  # do not count out links more than once
 
                     out_links.append(url)
@@ -166,6 +166,9 @@ class NFLScraper(CrawlSpider):
                         self.counts[url] = 1
                         self.in_link_dictionary[url] = [response.url] # in_links
 
+                    if url not in self.out_link_dictionary:
+                        self.out_link_dictionary[url] = []
+
             self.out_link_dictionary[response.url] = out_links
             self.pages_visited += 1
 
@@ -173,25 +176,23 @@ class NFLScraper(CrawlSpider):
             print(response.url, e)
 
     def create_PageGraph(self):
+
+        # Clean up
+        dangling_links = []
         for url in self.out_link_dictionary:
-            if (len(self.out_link_dictionary[url]) > 0): # Don't include dangling links
+            if len(self.out_link_dictionary[url]) == 0:
+                dangling_links.append(url)
+
+        for url in self.out_link_dictionary:
+            self.out_link_dictionary[url] = list(set(self.out_link_dictionary[url]) - set(dangling_links))
+
+        for url in self.out_link_dictionary:
+            if (len(self.out_link_dictionary[url]) > 0):
                 if url in self.counts:
                     self.page_graph.add_page(url, self.counts[url], self.in_link_dictionary[url], len(self.out_link_dictionary[url]), self.out_link_dictionary[url])
                 else:
                     self.page_graph.add_page(url, 0, list(), len(self.out_link_dictionary[url]), self.out_link_dictionary[url])
 
-    def csv_stats(self):
-        if not os.path.exists('csv'):
-            os.makedirs('csv')
-        file = open('csv/nfl.csv', 'w', newline='')
-        writer = csv.writer(file)
-        writer.writerow(('url', '# links to url', 'out links'))
-        for key in self.out_link_dictionary:
-            if key in self.counts:
-                writer.writerow((key, self.counts[key], self.out_link_dictionary[key]))
-            else:
-                writer.writerow((key, 0, self.out_link_dictionary[key]))
-        file.close()
   
     def close(self, spider, reason):
         self.output_callback(self.page_graph)

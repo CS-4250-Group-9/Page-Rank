@@ -31,7 +31,7 @@ import page_graph as pg
 #     for i, url in enumerate(sorted_ranks):
 #         rank = graph_CPP[url]['page_rank']
 #         sum += rank
-#         if i < 99:
+#         if i <= 99:
 #             file.write(f"{rank}: {url}\n")
         
 #     print(f'The total of the page ranks are: {sum}')      
@@ -55,7 +55,7 @@ with open('page_rankings_NFL.txt', 'w') as file:
     for i, url in enumerate(sorted_ranks):
         rank = graph_NFL[url]['page_rank']
         sum += rank
-        if i < 99:
+        if i <= 99:
             file.write(f"{rank}: {url}\n")
         
     print(f'The total of the page ranks are: {sum}')   

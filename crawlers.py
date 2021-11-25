@@ -231,20 +231,20 @@ def scrape_NFL(page_limit):
     page_graph = crawl_static(NFLScraper)
     return page_graph
 
-def main():
+# def main():
 
-    page_graph = pg.PageGraph()
+#     page_graph = pg.PageGraph()
 
-    scrape_cpp = input('Perform Scraping? (YES): ')
-    if scrape_cpp == 'YES':
-        global PAGE_LIMIT
-        PAGE_LIMIT = 15
-        page_graph = crawl_static(NFLScraper)
-        page_graph.display_keys()
+#     scrape_cpp = input('Perform Scraping? (YES): ')
+#     if scrape_cpp == 'YES':
+#         global PAGE_LIMIT
+#         PAGE_LIMIT = 15
+#         page_graph = crawl_static(NFLScraper)
+#         page_graph.display_keys()
         
-    else:
-        print('CPP Scraping skipped')
+#     else:
+#         print('CPP Scraping skipped')
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()

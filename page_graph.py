@@ -1,3 +1,9 @@
+'''
+Primary Author: Eugene Mondkar
+Page Rank method based on orginal page rank algorithm work by Miro Abdalian
+
+'''
+
 from collections import deque
 from collections import UserDict
 

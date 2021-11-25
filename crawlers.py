@@ -1,3 +1,9 @@
+'''
+Primary Author: Carl Fukawa
+Modifications: Eugene Mondkar
+
+'''
+
 from collections import Counter
 from scrapy.crawler import CrawlerProcess
 from scrapy.exceptions import CloseSpider, NotSupported

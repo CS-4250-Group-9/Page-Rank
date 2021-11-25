@@ -1,3 +1,8 @@
+'''
+Primary Author: Eugene Mondkar
+
+'''
+
 from crawlers import scrape_CPP, scrape_NFL
 import page_graph as pg
 

@@ -92,7 +92,7 @@ class PageGraph(UserDict):
 if __name__ == '__main__':
     pg = PageGraph()
 
-    for iter in range(50):
+    for iter in range(5):
         print(f'###### iteration: {iter} ###########')
         pg._test_page_rank(iter)
         print(f'###############################')
